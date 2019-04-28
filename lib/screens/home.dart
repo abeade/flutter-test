@@ -45,8 +45,8 @@ class RandomWordsState extends State<RandomWords> {
     //new DateTime(2019, 4, 28, 12, 28, 0, 0, 0);
     new DateTime.now().add(new Duration(seconds: 5));
     var androidPlatformChannelSpecifics =
-    new AndroidNotificationDetails('reminders',
-        'Reminders', 'Event reminders');
+    new AndroidNotificationDetails('reminders', 'Reminders', 'Event reminders',
+        importance: Importance.High, priority: Priority.High);
     var iOSPlatformChannelSpecifics =
     new IOSNotificationDetails();
     NotificationDetails platformChannelSpecifics = new NotificationDetails(
