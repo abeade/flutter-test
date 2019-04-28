@@ -1,45 +1,18 @@
 import 'dart:isolate';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:english_words/english_words.dart';
 import 'package:android_alarm_manager/android_alarm_manager.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
+
 void main() async {
+  flutterLocalNotificationsPlugin = new FlutterLocalNotificationsPlugin();
   final int helloAlarmID = 0;
   await AndroidAlarmManager.initialize();
   runApp(MyApp());
   await AndroidAlarmManager.oneShot(const Duration(minutes: 1), helloAlarmID, printHello);
-  await scheduleNotification();
-}
-
-Future<void> scheduleNotification() async {
-  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = new FlutterLocalNotificationsPlugin();
-// initialise the plugin. app_icon needs to be a added as a drawable resource to the Android head project
-  var initializationSettingsAndroid =
-  new AndroidInitializationSettings('@mipmap/ic_launcher');
-  var initializationSettingsIOS = new IOSInitializationSettings(
-      onDidReceiveLocalNotification: onDidRecieveLocationLocation);
-  var initializationSettings = new InitializationSettings(
-      initializationSettingsAndroid, initializationSettingsIOS);
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings,
-      onSelectNotification: onSelectNotification);
-
-  var scheduledNotificationDateTime =
-  //new DateTime(2019, 4, 28, 12, 28, 0, 0, 0);
-  new DateTime.now().add(new Duration(seconds: 5));
-  var androidPlatformChannelSpecifics =
-  new AndroidNotificationDetails('reminders',
-      'Reminders', 'Event reminders');
-  var iOSPlatformChannelSpecifics =
-  new IOSNotificationDetails();
-  NotificationDetails platformChannelSpecifics = new NotificationDetails(
-      androidPlatformChannelSpecifics, iOSPlatformChannelSpecifics);
-  await flutterLocalNotificationsPlugin.schedule(
-      0,
-      'scheduled title',
-      'scheduled body',
-      scheduledNotificationDateTime,
-      platformChannelSpecifics);
 }
 
 void printHello() {
@@ -68,6 +41,21 @@ class RandomWordsState extends State<RandomWords> {
   final _biggerFont = const TextStyle(fontSize: 18.0);
 
   @override
+  void initState() {
+    super.initState();
+    // initialise the plugin. app_icon needs to be a added as a drawable resource to the Android head project
+    var initializationSettingsAndroid =
+    AndroidInitializationSettings('app_icon');
+    var initializationSettingsIOS = IOSInitializationSettings(
+        onDidReceiveLocalNotification: onDidRecieveLocalNotification);
+    var initializationSettings = InitializationSettings(
+        initializationSettingsAndroid, initializationSettingsIOS);
+    flutterLocalNotificationsPlugin.initialize(initializationSettings,
+        onSelectNotification: onSelectNotification);
+    scheduleNotification();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -77,6 +65,59 @@ class RandomWordsState extends State<RandomWords> {
         ],
       ),
       body: _buildSuggestions(),
+    );
+  }
+
+  Future<void> scheduleNotification() async {
+    var scheduledNotificationDateTime =
+    //new DateTime(2019, 4, 28, 12, 28, 0, 0, 0);
+    new DateTime.now().add(new Duration(seconds: 5));
+    var androidPlatformChannelSpecifics =
+    new AndroidNotificationDetails('reminders',
+        'Reminders', 'Event reminders');
+    var iOSPlatformChannelSpecifics =
+    new IOSNotificationDetails();
+    NotificationDetails platformChannelSpecifics = new NotificationDetails(
+        androidPlatformChannelSpecifics, iOSPlatformChannelSpecifics);
+    await flutterLocalNotificationsPlugin.schedule(
+        0,
+        'scheduled title',
+        'scheduled body',
+        scheduledNotificationDateTime,
+        platformChannelSpecifics,
+        payload: 'item x');
+  }
+
+  Future<void> onDidRecieveLocalNotification(
+      int id, String title, String body, String payload) async {
+    // display a dialog with the notification details, tap ok to go to another page
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) => CupertinoAlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            child: Text('Ok'),
+            onPressed: () async {
+              Navigator.of(context, rootNavigator: true).pop();
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SecondScreen(payload),
+                ),
+              );
+            },
+          )
+        ],
+      ),
+    );
+  }
+
+  Future onSelectNotification(String payload) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => SecondScreen(payload)),
     );
   }
 
@@ -153,9 +194,37 @@ class RandomWords extends StatefulWidget {
   RandomWordsState createState() => RandomWordsState();
 }
 
-Future onDidRecieveLocationLocation(int id, String title, String body, String payload) {
+class SecondScreen extends StatefulWidget {
+  final String payload;
+  SecondScreen(this.payload);
 
+  @override
+  State<StatefulWidget> createState() => SecondScreenState();
 }
 
-Future onSelectNotification(String payload) {
+class SecondScreenState extends State<SecondScreen> {
+  String _payload;
+
+  @override
+  void initState() {
+    super.initState();
+    _payload = widget.payload;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Second Screen with payload: " + _payload),
+      ),
+      body: Center(
+        child: RaisedButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: Text('Go back!'),
+        ),
+      ),
+    );
+  }
 }
